@@ -1,0 +1,117 @@
+# --- templates/index.html ---
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa Transporte</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <h2>Mapa de Aparcaderos</h2>
+    <div id="mapa"></div>
+
+    <h3>Registrar Bus</h3>
+    {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
+    <form method="POST" action="/registrar_bus">
+        <label for="origen">Origen:</label>
+        <select name="origen" id="origen" required>
+            {% for ap in aparcaderos %}
+            <option value="{{ ap[1] }}">{{ ap[1] }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="destino">Destino:</label>
+        <select name="destino" id="destino" required>
+            {% for ap in aparcaderos %}
+            <option value="{{ ap[1] }}">{{ ap[1] }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="hora_salida">Hora de salida (hh:mm):</label>
+        <input name="hora_salida" type="time" required>
+
+        <button type="submit">Registrar</button>
+    </form>
+
+    <script>
+        const aparcaderos_data = [
+            {% for ap in aparcaderos %}
+            { id: {{ ap[0] }}, nombre: "{{ ap[1] }}", lat: {{ ap[2] }}, lon: {{ ap[3] }}, capacidad: {{ ap[4] }}, ocupacion: {{ ap[5] }} },
+            {% endfor %}
+        ];
+
+        const buses_data = [
+            {% for bus in buses %}
+            { id: {{ bus[0] }}, origen: "{{ bus[1] }}", destino: "{{ bus[2] }}", hora_salida: "{{ bus[3] }}" },
+            {% endfor %}
+        ];
+
+        const ultimo_bus_id = {{ ultimo_bus_id if ultimo_bus_id else 'null' }};
+    </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mapa = L.map('mapa').setView([4.7, -74.1], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(mapa);
+
+        const aparcaderosMap = {};
+
+        aparcaderos_data.forEach(ap => {
+            const marcador = L.marker([ap.lat, ap.lon])
+                .addTo(mapa)
+                .bindPopup(`<b>${ap.nombre}</b><br>Capacidad: ${ap.capacidad}<br>Ocupación: ${ap.ocupacion}`);
+            aparcaderosMap[ap.nombre] = { ...ap, marcador };
+        });
+
+        if (ultimo_bus_id !== null) {
+            const bus = buses_data.find(b => b.id === ultimo_bus_id);
+            if (bus) {
+                fetch(`/api/recorrido/${bus.id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.error) return;
+                        const { lat1, lon1, lat2, lon2, tiempo } = data;
+
+                        const pasos = 40;
+                        const delay = 50;
+                        const deltaLat = (lat2 - lat1) / pasos;
+                        const deltaLon = (lon2 - lon1) / pasos;
+
+                        const marcador = L.marker([lat1, lon1], {
+                            icon: L.divIcon({
+                                className: 'emoji-marker',
+                                html: '<div style="font-size: 44px;">🚌</div>',
+                                iconSize: [44, 44],
+                                iconAnchor: [22, 22]
+                            })
+                        }).addTo(mapa);
+
+                        let paso = 0;
+                        const mover = () => {
+                            if (paso <= pasos) {
+                                marcador.setLatLng([lat1 + deltaLat * paso, lon1 + deltaLon * paso]);
+                                paso++;
+                                setTimeout(mover, delay);
+                            } else {
+                                const [hh, mm] = bus.hora_salida.split(':').map(n => parseInt(n));
+                                const salida = new Date();
+                                salida.setHours(hh, mm, 0);
+
+                                const llegada = new Date(salida.getTime() + tiempo * 60000);
+                                const horaLlegada = llegada.toTimeString().split(':').slice(0, 2).join(':');
+                                const minutos = Math.round(tiempo);
+
+                                marcador.bindPopup(`🚌 Llegada: ${horaLlegada}<br>Duración: ${minutos} minutos`).openPopup();
+                            }
+                        };
+                        mover();
+                    });
+            }
+        }
+    });
+    </script>
+</body>
+</html>
