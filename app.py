@@ -3,7 +3,7 @@ import sqlite3
 from math import radians, cos, sin, asin, sqrt
 
 app = Flask(__name__)
-app.secret_key = 'superclave'
+app.secret_key = 'josuerom'
 DB = 'transportadora-cun.db'
 
 def calcular_distancia(lat1, lon1, lat2, lon2):

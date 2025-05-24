@@ -1,18 +1,20 @@
-# --- templates/index.html ---
+<!--- Autor: @josuerom | Fecha: 12/mayo/2025 -->
+<!-- A Jehova Dios gracias por todo lo que hace conmigo -->
 
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mapa Transporte</title>
+    <title>Transportadora GIS-UMD</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+    <link rel="icon" href="./static/favicon.ico" type="image/x-icon">
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-    <h2>Mapa de Aparcaderos</h2>
+    <h2>GIS DE APARCADEROS | UNIMINUTO | LOCOS GARCIA HERREROS</h2>
     <div id="mapa"></div>
 
-    <h3>Registrar Bus</h3>
+    <h3>Destinar Salida de Buses</h3>
     {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
     <form method="POST" action="/registrar_bus">
         <label for="origen">Origen:</label>
@@ -29,10 +31,10 @@
             {% endfor %}
         </select>
 
-        <label for="hora_salida">Hora de salida (hh:mm):</label>
+        <label for="hora_salida">Hora de salida:</label>
         <input name="hora_salida" type="time" required>
 
-        <button type="submit">Registrar</button>
+        <button type="submit">Despachar</button>
     </form>
 
     <script>
